@@ -183,3 +183,10 @@ def find_peak(x_data, y_data):
         max_val = 0
 
     return max_val
+
+def rect_sum(borders, image):
+
+    # remember [row,column]
+    slice_sum = numpy.sum((image[borders[0]:borders[2],borders[1]:borders[3]]))
+
+    return slice_sum

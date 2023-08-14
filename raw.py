@@ -15,22 +15,22 @@ print("Scanning "+ folder_path)
 # haven't gotten round to setting all that up yet ¯\_(ツ)_/¯ )
 ###############################################################
 
-centre_point = [609, 380]
+centre_point = [588, 380]
 #centre_point = [283, 209.5]
 #centre_point = [294, 209.5]
 num_arcs = 7
-num_wedges = 24
+num_wedges = 12
 
 xPx = 800
 yPx = 800
 
-max_radius = 400
+max_radius = 330
 #max_radius = 160
 
-startTime = 80
+startTime = 50
 #endTime = 208
 #endTime = 250
-endTime = 148
+endTime = 248
 #endTime = 148
 timeStep = 2
 
@@ -41,6 +41,12 @@ output_directory = "Profiles"
 bother_graphing = False
 
 subtract_bg = False
+
+# type 1 for arcs + wedges, type 2 for rectungular ROI
+roi_type = 1
+
+# [bottom, left, top, right] borders of rectangular ROI, image addressed as [row,column]
+rect_roi = [0, 0, 799, 799]
 
 ################################################################
 # End of input parameters
@@ -76,6 +82,9 @@ number_files = len(list)
 print ('Number of files in directory = '+str(number_files))
 print ('Number of files to process = '+str(num_timepoints)+', starting from '+str(startTime)+', ending at '+str(endTime))
 
+if roi_type == 2:
+    summed_roi_array = numpy.array([2,number_files])
+
 # compiles list of surface out measurements
 s_out_list = []
 for file in list:
@@ -110,8 +119,15 @@ for root, dirs, files in os.walk(folder_path):
                 #print(numpy.where(numpy.isclose(image, -1000)))
                 image = image - bg_image
                 # image goes to be processed, assigning the pixel intensity to the correct ROI
-                outputArray[:,:,int((int(delay)-startTime)/timeStep),1] = roi.roi_assign(xPx, yPx, centre_point, radius, wedge, num_arcs, num_wedges, image)
+                if roi_type == 1:
+                    outputArray[:,:,int((int(delay)-startTime)/timeStep),1] = roi.roi_assign(xPx, yPx, centre_point, radius, wedge, num_arcs, num_wedges, image)
+                elif roi_type == 2:
+                    sum_slice = roi.rect_sum(rect_roi, image)
+                    new_row = numpy.array([delay, sum_slice])
+                    summed_roi_array = numpy.vstack((summed_roi_array, new_row))
                 previous_value = delay
+        else:
+            previous_value = delay
 
 # comment here refers to comment that will go into output file.
 # the comment just contains all the of the radii used in processing the image for reference
@@ -123,73 +139,69 @@ delay_list = numpy.zeros((num_timepoints,1))
 for i in range(num_timepoints):
     delay_list[i] = (startTime + i*timeStep)*1E-6
 
-# takes the ROI array and writes each wedge out into its own file
-for j in range(num_wedges):
-    with open(output_directory+'/wedge '+str(round(wedge[j]-90-half_wedge_step,2))+'.csv','wb') as f:
-        write_array = outputArray[:,j,:,1]
-        # axes are swapped because they just don't seem to be the right way round in the first place?
-        write_array = numpy.swapaxes(write_array, 0, 1)
-        # VERY important step. This prevents the write array from being modified when making the normalised array.
-        # without specificially making a copy, the normalised_array object will just point to the write_array object and modify it unintentionally.
-        normalised_array = write_array.copy()
-        for i in range(num_arcs):
-            max_value = max(write_array[:,i])
-            if max_value > 0:
-                normalised_array[:,i] = normalised_array[:,i]/max_value
-            #else:
-                #print ("Exiting: Image wasn't properly read, possible cause is the choice of delimiter for extracting delay from image.")
-                #sys.exit()
-        
-        # staples the delay list to the ROI data
-        write_array = numpy.hstack((delay_list,write_array))
-        write_array = numpy.hstack((write_array,normalised_array))
-        numpy.savetxt(f, write_array, fmt='%.5e', delimiter=',', header=comment)
+if roi_type == 1:
+    # takes the ROI array and writes each wedge out into its own file
+    for j in range(num_wedges):
+        with open(output_directory+'/wedge '+str(round(wedge[j]-90-half_wedge_step,2))+'.csv','wb') as f:
+            write_array = outputArray[:,j,:,1]
+            # axes are swapped because they just don't seem to be the right way round in the first place?
+            write_array = numpy.swapaxes(write_array, 0, 1)
+            # VERY important step. This prevents the write array from being modified when making the normalised array.
+            # without specificially making a copy, the normalised_array object will just point to the write_array object and modify it unintentionally.
+            normalised_array = write_array.copy()
+            for i in range(num_arcs):
+                max_value = max(write_array[:,i])
+                if max_value > 0:
+                    normalised_array[:,i] = normalised_array[:,i]/max_value
+                #else:
+                    #print ("Exiting: Image wasn't properly read, possible cause is the choice of delimiter for extracting delay from image.")
+                    #sys.exit()
+            
+            # staples the delay list to the ROI data
+            write_array = numpy.hstack((delay_list,write_array))
+            write_array = numpy.hstack((write_array,normalised_array))
+            numpy.savetxt(f, write_array, fmt='%.5e', delimiter=',', header=comment)
 
-# this step handles the writing of a 'parameters' file, contianing the radius and wedge boundaries used, once again for reference
-wedge = numpy.array(wedge)
-radius = numpy.array(radius)
-# This part adjusts either the wedge or radius array to be the same size as the other, meaning that they can now be stacked (stapled) together in order to write them out to a file.
-if num_arcs != num_wedges:
-    if num_arcs > num_wedges:
-        wedge = numpy.pad(wedge, (0,num_arcs-num_wedges))
-        largest = num_arcs
+elif roi_type == 2:
+    with open(output_directory+'/summed_roi.csv','wb') as f:
+        numpy.savetxt(f, summed_roi_array, fmt='%.5e', delimiter=',', header=comment)
+
+if roi_type == 1:
+    # this step handles the writing of a 'parameters' file, contianing the radius and wedge boundaries used, once again for reference
+    wedge = numpy.array(wedge)
+    radius = numpy.array(radius)
+    # This part adjusts either the wedge or radius array to be the same size as the other, meaning that they can now be stacked (stapled) together in order to write them out to a file.
+    if num_arcs != num_wedges:
+        if num_arcs > num_wedges:
+            wedge = numpy.pad(wedge, (0,num_arcs-num_wedges))
+            largest = num_arcs
+        else:
+            radius = numpy.pad(radius, (0,num_wedges-num_arcs))
+            largest = num_wedges
     else:
-        radius = numpy.pad(radius, (0,num_wedges-num_arcs))
-        largest = num_wedges
-else:
-    largest = num_arcs
+        largest = num_arcs
 
-half_radius_increment = max_radius/num_arcs
-for index, element in enumerate(radius):
-    radius[index] -= half_radius_increment
+    half_radius_increment = max_radius/num_arcs
+    for index, element in enumerate(radius):
+        radius[index] -= half_radius_increment
 
-array = numpy.zeros((largest,2))
-array[:,0] = radius
-array[:,1] = wedge
+    array = numpy.zeros((largest,2))
+    array[:,0] = radius
+    array[:,1] = wedge
 
-"""
-print (" ")
+    # finally writes the parameters file
+    with open(output_directory+'/parameters.txt','wb') as f:
+        header_str = 'start time = '+str(startTime)+', end time = '+str(endTime)+', num radii = '+str(num_arcs)+', num angles = '+str(num_wedges) + "max radius = " +str(max_radius)
+        numpy.savetxt(f, array , fmt='%s', delimiter=',',header=header_str)
 
-for j in range(num_arcs):
-    print("arc "+str(j))
-    print(" ")
-    for i in range(num_wedges):
-        print(outputArray[j,i,0,1])
-"""
+    if bother_graphing:
+        real_data = numpy.loadtxt(r"C:\Users\adam\Desktop\Book2.csv", delimiter=',')
 
-# finally writes the parameters file
-with open(output_directory+'/parameters.txt','wb') as f:
-    header_str = 'start time = '+str(startTime)+', end time = '+str(endTime)+', num radii = '+str(num_arcs)+', num angles = '+str(num_wedges) + "max radius = " +str(max_radius)
-    numpy.savetxt(f, array , fmt='%s', delimiter=',',header=header_str)
+        probe_array = outputArray[3,6,:,1].copy()
+        maximum = max(probe_array)
 
-if bother_graphing:
-    real_data = numpy.loadtxt(r"C:\Users\adam\Desktop\Book2.csv", delimiter=',')
-
-    probe_array = outputArray[3,6,:,1].copy()
-    maximum = max(probe_array)
-
-    plt.plot(delay_list, probe_array/maximum, delay_list, real_data[:,1])
-    plt.show()
+        plt.plot(delay_list, probe_array/maximum, delay_list, real_data[:,1])
+        plt.show()
 
 print ('')
 print ('Done',end='\r')
