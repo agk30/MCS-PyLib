@@ -27,10 +27,10 @@ yPx = 800
 max_radius = 330
 #max_radius = 160
 
-startTime = 50
+startTime = 118
 #endTime = 208
 #endTime = 250
-endTime = 248
+endTime = 118
 #endTime = 148
 timeStep = 2
 
@@ -43,10 +43,10 @@ bother_graphing = False
 subtract_bg = False
 
 # type 1 for arcs + wedges, type 2 for rectungular ROI
-roi_type = 1
+roi_type = 2
 
-# [bottom, left, top, right] borders of rectangular ROI, image addressed as [row,column]
-rect_roi = [0, 0, 799, 799]
+# [top, left, bottom, right] borders of rectangular ROI, image addressed as [row,column]
+rect_roi = [270, 155, 510, 535]
 
 ################################################################
 # End of input parameters
@@ -83,7 +83,8 @@ print ('Number of files in directory = '+str(number_files))
 print ('Number of files to process = '+str(num_timepoints)+', starting from '+str(startTime)+', ending at '+str(endTime))
 
 if roi_type == 2:
-    summed_roi_array = numpy.array([2,number_files])
+    summed_roi_array = numpy.zeros(shape=(number_files,2))
+print(summed_roi_array)
 
 # compiles list of surface out measurements
 s_out_list = []
@@ -100,6 +101,7 @@ previous_value = startTime - timeStep
 
 first_run = False
 bg_image = 0
+i = 0
 for root, dirs, files in os.walk(folder_path):
     for name in files:
         file_path = root + "/" + name
@@ -124,10 +126,11 @@ for root, dirs, files in os.walk(folder_path):
                 elif roi_type == 2:
                     sum_slice = roi.rect_sum(rect_roi, image)
                     new_row = numpy.array([delay, sum_slice])
-                    summed_roi_array = numpy.vstack((summed_roi_array, new_row))
+                    summed_roi_array[i,:] = new_row
                 previous_value = delay
         else:
             previous_value = delay
+        i += 1
 
 # comment here refers to comment that will go into output file.
 # the comment just contains all the of the radii used in processing the image for reference

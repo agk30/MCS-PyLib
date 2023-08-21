@@ -5,4 +5,4 @@ input_file = fm.get_input_file()
 
 image = numpy.loadtxt(input_file)
 
-print(image.max(), image.min())
+print(image[0,0])

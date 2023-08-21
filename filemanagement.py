@@ -134,3 +134,10 @@ def get_regex_string(surface_list, transition_list, version_list):
 def grab_number(string):
 
     return re.findall(r'-?\d+', string)
+
+def num_files(directory):
+
+    list = os.listdir(directory)
+    number_files = len(list)
+
+    return number_files
