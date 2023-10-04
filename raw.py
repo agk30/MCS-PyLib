@@ -15,22 +15,22 @@ print("Scanning "+ folder_path)
 # haven't gotten round to setting all that up yet ¯\_(ツ)_/¯ )
 ###############################################################
 
-centre_point = [588, 380]
-#centre_point = [283, 209.5]
+#centre_point = [588, 380]
+centre_point = [283, 209.5]
 #centre_point = [294, 209.5]
 num_arcs = 7
-num_wedges = 12
+num_wedges = 24
 
-xPx = 800
-yPx = 800
+xPx = 420
+yPx = 420
 
-max_radius = 330
-#max_radius = 160
+#max_radius = 330
+max_radius = 160
 
-startTime = 118
+startTime = 50
 #endTime = 208
 #endTime = 250
-endTime = 118
+endTime = 250
 #endTime = 148
 timeStep = 2
 
@@ -43,7 +43,7 @@ bother_graphing = False
 subtract_bg = False
 
 # type 1 for arcs + wedges, type 2 for rectungular ROI
-roi_type = 2
+roi_type = 1
 
 # [top, left, bottom, right] borders of rectangular ROI, image addressed as [row,column]
 rect_roi = [270, 155, 510, 535]
@@ -84,7 +84,6 @@ print ('Number of files to process = '+str(num_timepoints)+', starting from '+st
 
 if roi_type == 2:
     summed_roi_array = numpy.zeros(shape=(number_files,2))
-print(summed_roi_array)
 
 # compiles list of surface out measurements
 s_out_list = []
