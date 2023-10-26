@@ -2,7 +2,7 @@ import numpy
 import filemanagement as fm
 import os
 
-bg_image = numpy.loadtxt("C:/Users/adam/Desktop/Q13 OLE New Data/Second Try/10_08_2023_13_34_is_Q13_OLE_bg/0.txt")
+bg_image = numpy.loadtxt(r"C:\Users\adam\Desktop\Q13 OLE New Data\Second Try\10_08_2023_13_36_is_Q13_PFPE__bg\0.txt")
 input_folder = fm.get_input_folder()
 output_folder = "subtracted images"
 if not os.path.exists(output_folder):
@@ -18,3 +18,5 @@ for root, dirs, files in os.walk(input_folder):
                     numpy.savetxt(g, sub_image)
             except:
                 print("error in", root+"/"+file)
+
+print("おわり！")
